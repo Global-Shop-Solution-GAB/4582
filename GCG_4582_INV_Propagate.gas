@@ -1,0 +1,236 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'Hook 10210 and 10120
+V.Local.sSQL.Declare(String)
+V.Local.sPart.Declare(String)
+V.Local.fLabor.Declare(Float)
+V.Local.fMaterial.Declare(Float)
+V.Local.fOverhead.Declare(Float)
+V.Local.sVendor.Declare(String)
+V.Local.sSource.Declare(String)
+V.Local.sPL.Declare(String)
+V.Local.sDesc.Declare(String)
+V.Local.sUM.Declare(String)
+V.Local.fPrice.Declare(Float)
+V.Local.fCost.Declare(Float)
+V.Local.sUMPurch.Declare(String)
+V.Local.sLead.Declare(String)
+V.Local.fQtySafety.Declare(Float)
+V.Local.fQtyOrder.Declare(Float)
+V.Local.sSortCode.Declare(String)
+V.Local.sObsolete.Declare(String)
+V.Local.sInactive.Declare(String)
+V.Local.fAlt1.Declare(Float)
+V.Local.fAlt2.Declare(Float)
+V.Local.fAlt3.Declare(Float)
+V.Local.fAlt4.Declare(Float)
+V.Local.fAlt5.Declare(Float)
+V.Local.fAlt6.Declare(Float)
+V.Local.fAlt7.Declare(Float)
+V.Local.fAlt8.Declare(Float)
+V.Local.fAlt9.Declare(Float)
+V.Local.fAlt10.Declare(Float)
+V.Local.fAlt11.Declare(Float)
+V.Local.fAlt12.Declare(Float)
+V.Local.fAlt13.Declare(Float)
+V.Local.fAlt14.Declare(Float)
+V.Local.sPriceCat.Declare(String)
+
+
+V.Local.fOutside.Declare(Float)
+V.Local.fFreight.Declare(Float)
+V.Local.fOther.Declare(Float)
+
+
+'Update by TRT 6/23/16
+'Update by BCC 5/18/17
+'Updating from using FG_STD_COST to Inventory_COST
+
+F.Intrinsic.Control.If(V.Caller.Hook,=,10120)
+	V.Passed.000068.Set("Propagate")
+F.Intrinsic.Control.Else
+	F.Intrinsic.String.GSSPartString(V.Passed.000007,V.Passed.000008,V.Local.sPart)
+	F.Intrinsic.Control.If(V.local.sPart.Trim,<>,"")
+		F.ODBC.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+		
+		F.Intrinsic.String.Build("SELECT * FROM INVENTORY_MSTR WHERE PART='{0}' AND LOCATION = '{1}'",V.local.sPart.Trim,V.Passed.000009,V.Local.sSQL)
+		F.ODBC.Connection!conx.OpenRecordsetRO("rstInv",V.Local.sSQL)
+		F.Intrinsic.String.Build("Select * From Inventory_COST Where Part = '{0}' And LOCN = '{1}'",V.Local.sPart.Trim,V.Passed.000009,V.Local.sSQL)
+		F.ODBC.Connection!conx.OpenRecordsetRO("rstINVC",V.Local.sSQL)
+		
+		F.Intrinsic.Control.If(V.ODBC.conx!rstInv.EOF,<>,True)
+			V.Local.sPL.Set(V.ODBC.conx!rstInv.FieldValTrim!PRODUCT_LINE)
+			V.Local.sDesc.Set(V.ODBC.conx!rstInv.FieldValTrim!DESCRIPTION)
+			V.Local.sUM.Set(V.ODBC.conx!rstInv.FieldValTrim!UM_INVENTORY)
+			V.Local.fPrice.Set(V.ODBC.conx!rstInv.FieldValTrim!AMT_PRICE)
+			
+			F.Intrinsic.Control.If(V.ODBC.conx!rstInvc.EOF,=,False)
+				V.Local.fCost.Set(V.ODBC.conx!rstINVC.FieldValTrim!COST)
+			F.Intrinsic.Control.Else
+				V.Local.fCost.Set(0)
+			F.Intrinsic.Control.EndIf
+			F.ODBC.conx!rstINVC.Close
+
+			V.Local.sUMPurch.Set(V.ODBC.conx!rstInv.FieldValTrim!UM_PURCHASING)
+			V.Local.sLead.Set(V.ODBC.conx!rstInv.FieldValTrim!TIME_MATERIAL_LEAD)
+			V.Local.fQtySafety.Set(V.ODBC.conx!rstInv.FieldValTrim!QTY_SAFETY)
+			V.Local.fQtyOrder.Set(V.ODBC.conx!rstInv.FieldValTrim!QTY_ORDER)
+			V.Local.sSortCode.Set(V.ODBC.conx!rstInv.FieldValTrim!CODE_SORT)
+			V.Local.sObsolete.Set(V.ODBC.conx!rstInv.FieldValLTrim!Obsolete_Flag)
+			V.Local.sInactive.Set(V.ODBC.conx!rstInv.FieldValLTrim!Flag_Inactive)
+			F.ODBC.conx!rstInv.Close
+
+			F.Intrinsic.String.Build("SELECT * FROM INVENTORY_MSTR WHERE PART='{0}' AND LOCATION <> '{1}'",V.local.sPart.Trim,V.Passed.000009,V.Local.sSQL)
+			F.ODBC.Connection!conx.OpenRecordsetRW("rstInv",V.Local.sSQL)
+			F.Intrinsic.Control.DoUntil(V.ODBC.conx!rstInv.EOF,=,True)
+				'PL			
+				F.ODBC.conx!rstInv.Set!PRODUCT_LINE(V.Local.sPL)
+				'Description
+				F.ODBC.conx!rstInv.Set!DESCRIPTION(V.Local.sDesc)
+				'UM
+				F.ODBC.conx!rstInv.Set!UM_INVENTORY(V.Local.sUM)
+				'List Price
+				F.ODBC.conx!rstInv.Set!AMT_PRICE(V.Local.fPrice)
+				'Cost
+				F.ODBC.conx!rstInv.Set!AMT_COST(V.Local.fCost)
+				'Purch UM
+				F.ODBC.conx!rstInv.Set!UM_PURCHASING(V.Local.sUMPurch)
+				'Lead
+				F.ODBC.conx!rstInv.Set!TIME_MATERIAL_LEAD(V.Local.sLead)
+				'Safety Stock
+				F.ODBC.conx!rstInv.Set!QTY_SAFETY(V.Local.fQtySafety)
+				'Order Qty
+				F.ODBC.conx!rstInv.Set!QTY_ORDER(V.Local.fQtyOrder)
+				'Sort Code
+				F.ODBC.conx!rstInv.Set!CODE_SORT(V.Local.sSortCode)
+				'Inactive
+				F.ODBC.conx!rstInv.Set!Flag_Inactive(V.Local.sInactive)
+				'Obsolete
+				F.ODBC.conx!rstInv.Set!Obsolete_Flag(V.Local.sObsolete)
+				F.ODBC.conx!rstInv.MoveNext
+			F.Intrinsic.Control.Loop
+			F.ODBC.conx!rstInv.Close
+		F.Intrinsic.Control.Else
+			F.ODBC.conx!rstInv.Close
+		F.Intrinsic.Control.EndIf
+
+		F.Intrinsic.String.Build("SELECT * FROM INVENTORY_MST2 WHERE PART='{0}' AND LOCATION = '{1}'",V.local.sPart.Trim,V.Passed.000009,V.Local.sSQL)
+		F.ODBC.Connection!conx.OpenRecordsetRO("rstInv",V.Local.sSQL)
+		F.Intrinsic.Control.If(V.ODBC.conx!rstInv.EOF,<>,True)
+			V.Local.sSource.Set(V.ODBC.conx!rstInv.FieldValTrim!CODE_SOURCE)
+			V.Local.sVendor.Set(V.ODBC.conx!rstInv.FieldValTrim!NAME_VENDOR)
+			V.Local.sPriceCat.Set(V.ODBC.conx!rstInv.FieldValTrim!PRICE_CATG)
+			F.ODBC.conx!rstInv.Close
+			
+			F.Intrinsic.String.Build("SELECT * FROM INVENTORY_MST2 WHERE PART='{0}' AND LOCATION <> '{1}'",V.local.sPart.Trim,V.Passed.000009,V.Local.sSQL)
+			F.ODBC.Connection!conx.OpenRecordsetRW("rstInv",V.Local.sSQL)
+			F.Intrinsic.Control.DoUntil(V.ODBC.conx!rstInv.EOF,=,True)
+				'Vendor
+				F.ODBC.conx!rstInv.Set!NAME_VENDOR(V.Local.sVendor)
+				'Source
+				F.ODBC.conx!rstInv.Set!CODE_SOURCE(V.Local.sSource)
+				'Pay Category
+				F.ODBC.conx!rstInv.Set!PRICE_CATG(V.Local.sPriceCat)
+				F.ODBC.conx!rstInv.MoveNext
+			F.Intrinsic.Control.Loop
+			F.ODBC.conx!rstInv.Close
+		F.Intrinsic.Control.Else
+			F.ODBC.conx!rstInv.Close
+		F.Intrinsic.Control.EndIf
+
+		F.Intrinsic.String.Build("SELECT * FROM Inventory_COST WHERE PART='{0}' AND LOCN = '{1}'",V.local.sPart.Trim,V.Passed.000009,V.Local.sSQL)
+		F.ODBC.Connection!conx.OpenRecordsetRO("rstInv",V.Local.sSQL)
+		F.Intrinsic.Control.If(V.ODBC.conx!rstInv.EOF,<>,True)
+'			v.Local.fCost.Set(v.ODBC.conx!rstInv.fieldvaltim!cost)
+			V.Local.fCost.Set(V.ODBC.conx!rstInv.FieldValTrim!cost)
+			V.Local.fLabor.Set(V.ODBC.conx!rstInv.FieldValTrim!LABOR)
+			V.Local.fMaterial.Set(V.ODBC.conx!rstInv.FieldValTrim!MATL)
+			V.Local.fOverhead.Set(V.ODBC.conx!rstInv.FieldValTrim!OVHD)
+			V.Local.fOutside.Set(V.ODBC.conx!rstInv.FieldValTrim!OUTS)
+			V.Local.fFreight.Set(V.ODBC.conx!rstInv.FieldValTrim!Freight)
+			V.Local.fOther.Set(V.ODBC.conx!rstInv.FieldValTrim!Oth)
+
+			F.ODBC.conx!rstInv.Close
+
+			F.Intrinsic.String.Build("SELECT * FROM INVENTORY_COST WHERE PART='{0}' AND LOCN <> '{1}'",V.local.sPart.Trim,V.Passed.000009,V.Local.sSQL)
+			F.ODBC.Connection!conx.OpenRecordsetRW("rstInv",V.Local.sSQL)
+			F.Intrinsic.Control.DoUntil(V.ODBC.conx!rstInv.EOF,=,True)
+				'cost
+				F.ODBC.conx!rstInv.Set!Cost(V.Local.fCost)
+				'Labor Cost
+				F.ODBC.conx!rstInv.Set!LABOR(V.local.fLabor)
+				'Material Cost
+				F.ODBC.conx!rstInv.Set!MATL(V.local.fMaterial)
+				'Overhead Cost
+				F.ODBC.conx!rstInv.Set!OVHD(V.local.fOverhead)
+				'Outisde
+				F.ODBC.conx!rstInv.Set!Outs(V.Local.fOutside)
+				'Freight
+				F.ODBC.conx!rstInv.Set!Freight(V.Local.fFreight)
+				'Other
+				F.ODBC.conx!rstInv.Set!OTH(V.Local.fOther)
+
+				F.ODBC.conx!rstInv.MoveNext
+			F.Intrinsic.Control.Loop
+			F.ODBC.conx!rstInv.Close
+		F.Intrinsic.Control.Else
+			F.ODBC.conx!rstInv.Close
+		F.Intrinsic.Control.EndIf
+
+		F.Intrinsic.String.Build("SELECT * FROM INV_ALT_PRICE WHERE PART='{0}' AND LOCN = '{1}'",V.local.sPart.Trim,V.Passed.000009,V.Local.sSQL)
+		F.ODBC.Connection!conx.OpenRecordsetRO("rstInv",V.Local.sSQL)
+		F.Intrinsic.Control.If(V.ODBC.conx!rstInv.EOF,<>,True)
+			V.Local.fAlt1.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_1)
+			V.Local.fAlt2.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_2)
+			V.Local.fAlt3.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_3)
+			V.Local.fAlt4.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_4)
+			V.Local.fAlt5.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_5)
+			V.Local.fAlt6.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_6)
+			V.Local.fAlt7.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_7)
+			V.Local.fAlt8.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_8)
+			V.Local.fAlt9.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_9)
+			V.Local.fAlt10.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_10)
+			V.Local.fAlt11.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_11)
+			V.Local.fAlt12.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_12)
+			V.Local.fAlt13.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_13)
+			V.Local.fAlt14.Set(V.ODBC.conx!rstInv.FieldValTrim!Alt_Price_14)
+			F.ODBC.conx!rstInv.Close
+			
+			F.Intrinsic.String.Build("SELECT * FROM INV_ALT_PRICE WHERE PART='{0}' AND LOCN <> '{1}'",V.local.sPart.Trim,V.Passed.000009,V.Local.sSQL)
+			F.ODBC.Connection!conx.OpenRecordsetRW("rstInv",V.Local.sSQL)
+			F.Intrinsic.Control.DoUntil(V.ODBC.conx!rstInv.EOF,=,True)
+				'Alternate Prices 1-14
+				F.ODBC.conx!rstInv.Set!Alt_Price_1(V.Local.fAlt1)
+				F.ODBC.conx!rstInv.Set!Alt_Price_2(V.Local.fAlt2)
+				F.ODBC.conx!rstInv.Set!Alt_Price_3(V.Local.fAlt3)
+				F.ODBC.conx!rstInv.Set!Alt_Price_4(V.Local.fAlt4)
+				F.ODBC.conx!rstInv.Set!Alt_Price_5(V.Local.fAlt5)
+				F.ODBC.conx!rstInv.Set!Alt_Price_6(V.Local.fAlt6)
+				F.ODBC.conx!rstInv.Set!Alt_Price_7(V.Local.fAlt7)
+				F.ODBC.conx!rstInv.Set!Alt_Price_8(V.Local.fAlt8)
+				F.ODBC.conx!rstInv.Set!Alt_Price_9(V.Local.fAlt9)
+				F.ODBC.conx!rstInv.Set!Alt_Price_10(V.Local.fAlt10)
+				F.ODBC.conx!rstInv.Set!Alt_Price_11(V.Local.fAlt11)
+				F.ODBC.conx!rstInv.Set!Alt_Price_12(V.Local.fAlt12)
+				F.ODBC.conx!rstInv.Set!Alt_Price_13(V.Local.fAlt13)
+				F.ODBC.conx!rstInv.Set!Alt_Price_14(V.Local.fAlt14)
+				F.ODBC.conx!rstInv.MoveNext
+			F.Intrinsic.Control.Loop
+			F.ODBC.conx!rstInv.Close
+		F.Intrinsic.Control.Else
+			F.ODBC.conx!rstInv.Close
+		F.Intrinsic.Control.EndIf
+
+		F.ODBC.Connection!conx.Close
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+Program.Sub.Main.End
+
+
